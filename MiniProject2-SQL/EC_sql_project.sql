@@ -111,9 +111,9 @@ the member name. */
 SELECT DISTINCT 
 	CONCAT(m.surname, ", ", m.firstname) AS member, 
 	f.name AS facility
-FROM  `Members` m
-	JOIN  `Bookings` b ON m.memid = b.memid
-	JOIN  `Facilities` f ON b.facid = f.facid
+FROM  Members m
+	JOIN  Bookings b ON m.memid = b.memid
+	JOIN  Facilities f ON b.facid = f.facid
 		WHERE b.facid
 			IN ( 0, 1 )
 				AND b.memid <> 0
@@ -173,9 +173,9 @@ SELECT DISTINCT
 		WHEN f.facid IN (0,1)
 			THEN 'Tennis Court 1 or 2'
 	END AS facility
-FROM  `Members` m
-	JOIN  `Bookings` b ON m.memid = b.memid
-	JOIN  `Facilities` f ON b.facid = f.facid
+FROM  Members m
+	JOIN  Bookings b ON m.memid = b.memid
+	JOIN  Facilities f ON b.facid = f.facid
 		WHERE b.facid
 			IN ( 0, 1 )
 				AND b.memid <> 0
@@ -216,11 +216,85 @@ the guest user's ID is always 0. Include in your output the name of the
 facility, the name of the member formatted as a single column, and the cost.
 Order by descending cost, and do not use any subqueries. */
 
+SELECT f.name, 
+	CASE
+		WHEN m.surname = 'GUEST'
+		THEN m.surname
+			ELSE CONCAT(m.surname, ", ", m.firstname)
+	END AS member,
+	CASE
+		WHEN m.surname = 'GUEST'
+		THEN f.guestcost * b.slots
+			ELSE f.membercost * b.slots
+	END AS cost
+FROM Bookings b
+JOIN Facilities f ON b.facid = f.facid
+JOIN Members m ON b.memid = m.memid
+WHERE b.starttime BETWEEN '2012-09-14' AND '2012-09-15'
+HAVING cost > 30
+ORDER BY cost DESC
+
+Result:
+Massage Room 2 GUEST 320.0
+Massage Room 1 GUEST 160.0
+Massage Room 1 GUEST 160.0
+Massage Room 1 GUEST 160.0
+Tennis Court 2 GUEST 150.0
+Tennis Court 2 GUEST 75.0
+Tennis Court 1 GUEST 75.0
+Tennis Court 1 GUEST 75.0
+Squash Court GUEST 70.0
+Massage Room 1 Farrell, Jemima 39.6
+Squash Court GUEST 35.0
+Squash Court GUEST 35.0
+
 
 /* Q9: This time, produce the same result as in Q8, but using a subquery. */
+
+SELECT * FROM (
+
+	SELECT f.name, 
+		CASE
+			WHEN m.surname = 'GUEST'
+			THEN m.surname
+				ELSE CONCAT(m.surname, ", ", m.firstname)
+	END AS member,
+		CASE
+			WHEN m.surname = 'GUEST'
+			THEN f.guestcost * b.slots
+				ELSE f.membercost * b.slots
+	END AS cost
+	FROM Bookings b
+	JOIN Facilities f ON b.facid = f.facid
+	JOIN Members m ON b.memid = m.memid
+	WHERE b.starttime BETWEEN '2012-09-14' AND '2012-09-15'
+		) AS subquery
+WHERE cost > 30
+ORDER BY cost DESC
+
+Result : same as above - note WHERE can replace HAVING after subquery 
 
 
 /* Q10: Produce a list of facilities with a total revenue less than 1000.
 The output of facility name and total revenue, sorted by revenue. Remember
 that there's a different cost for guests and members! */
+
+SELECT f.name, 
+	SUM(CASE 
+		WHEN b.memid=0
+		THEN b.slots*f.guestcost
+			ELSE b.slots*f.membercost
+	     END) 
+	AS total_revenue
+FROM Facilities f
+JOIN Bookings b
+ON f.facid = b.facid
+GROUP BY f.name
+HAVING total_revenue < 1000
+
+Result:
+Pool Table 270.0
+Snooker Table 240.0
+Table Tennis 180.0
+
 
